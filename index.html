@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Campfire Tales</title>
+<style>
+  :root { --ink: #fff4e3; --dim: #c9b9a3; --ember: #ffb347; --flame: #ff7a2f; --panel: #1a1424e6; }
+  html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; background: #0b1030; }
+  body { font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); user-select: none; -webkit-user-select: none; }
+  canvas { position: fixed; inset: 0; display: block; touch-action: none; }
+  [hidden] { display: none !important; }
+  button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
+  #story { position: fixed; left: 50%; top: max(10px, env(safe-area-inset-top)); transform: translateX(-50%); width: min(720px, calc(100vw - 24px)); box-sizing: border-box; max-height: 38vh; overflow: auto; padding: 12px 16px; border-radius: 18px; background: var(--panel); border: 1px solid #ffb34733; box-shadow: 0 0 40px #ff7a2f22; }
+  #story:empty { display: none; }
+  #story .twist { display: inline-block; margin-bottom: 6px; padding: 3px 10px; border-radius: 999px; background: #8a5cff44; color: #e6dcff; font-weight: 800; font-size: 13px; }
+  #story .title { font-size: 12px; font-weight: 800; letter-spacing: .14em; color: var(--ember); text-transform: uppercase; margin-bottom: 4px; }
+  #text { font: 21px/1.5 Georgia, "Times New Roman", serif; }
+  #text span { border-bottom: 2px solid transparent; padding: 0 1px; border-radius: 4px; transition: background .3s, color .3s; }
+  #text span.new { animation: pop .5s ease-out; color: #fff; text-shadow: 0 0 12px #ffb347; }
+  #text span.lit { background: #ffb34755; color: #fff; }
+  #text span.fire { color: #ffcf8a; font-style: italic; }
+  #text button { border: 0; background: #ffffff10; border-radius: 6px; padding: 2px 4px; margin: 1px 0; font: 21px/1.4 Georgia, serif; border-bottom: 2px solid transparent; }
+  #text button.mine { opacity: .45; cursor: default; }
+  #text button.on { background: #ffb347; color: #2a1600; }
+  #text button i { font-style: normal; font-size: 12px; font-weight: 800; color: var(--ember); margin-left: 3px; font-family: system-ui, sans-serif; }
+  #text button.on i { color: #2a1600; }
+  @keyframes pop { 0% { transform: scale(1.3); opacity: 0; } 100% { transform: none; opacity: 1; } }
+  #text span, #text button { display: inline-block; }
+  @media (max-width: 600px) { #text, #text button { font-size: 18px; } }
+  body.attract #text { font-size: 30px; } body.attract #story { width: min(860px, calc(100vw - 24px)); }
+  #big { position: fixed; left: 0; right: 0; top: 44%; text-align: center; pointer-events: none; padding: 0 16px; text-shadow: 0 2px 10px #000; }
+  #big:empty { display: none; }
+  #big b { display: block; font: 900 clamp(26px, 6vw, 44px)/1.1 Georgia, serif; color: var(--ember); }
+  #big small { display: block; font-size: 15px; font-weight: 700; color: var(--dim); margin-top: 4px; }
+  #turn { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(10px, env(safe-area-inset-bottom)); width: min(560px, calc(100vw - 24px)); box-sizing: border-box; padding: 10px 12px; border-radius: 18px; background: var(--panel); border: 1px solid #ffffff22; }
+  #turnQ { font-weight: 800; margin-bottom: 6px; text-align: center; }
+  #bar { height: 6px; border-radius: 3px; background: #ffffff1a; overflow: hidden; margin-bottom: 8px; } #bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--ember), var(--flame)); transform-origin: left; }
+  #mine { display: flex; gap: 8px; } #mine[hidden] { display: none; }
+  #say { flex: 1; min-width: 0; height: 48px; border-radius: 12px; border: 2px solid #ffb34766; background: #0006; color: #fff; padding: 0 12px; font: 18px Georgia, serif; user-select: text; -webkit-user-select: text; }
+  #send { min-width: 80px; height: 48px; border: 0; border-radius: 12px; background: var(--flame); color: #fff; font-weight: 800; }
+  #chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; justify-content: center; }
+  #chips button { min-height: 44px; padding: 0 12px; border-radius: 999px; border: 2px solid #ffffff22; background: #ffffff12; font: 16px Georgia, serif; }
+  #net { position: fixed; left: max(10px, env(safe-area-inset-left)); bottom: max(10px, env(safe-area-inset-bottom)); font-size: 12px; color: var(--dim); pointer-events: none; text-shadow: 0 1px 3px #000; }
+  #tools { position: fixed; right: max(10px, env(safe-area-inset-right)); bottom: max(10px, env(safe-area-inset-bottom)); display: flex; gap: 8px; }
+  #tools button { width: 48px; height: 48px; border-radius: 50%; border: 1px solid #ffffff33; background: var(--panel); font-size: 20px; }
+  body.turning #tools, body.turning #net { bottom: calc(max(10px, env(safe-area-inset-bottom)) + 185px); }
+  .sheet { position: fixed; inset: 0; display: grid; place-items: center; background: #000a; padding: 16px; box-sizing: border-box; }
+  .card { box-sizing: border-box; width: min(420px, calc(100vw - 32px)); max-height: 84vh; overflow: auto; padding: 16px 18px; border-radius: 18px; background: #1d1626; border: 1px solid #ffb34744; box-shadow: 0 0 60px #ff7a2f33; }
+  .card h2 { margin: 0 0 4px; font: 900 24px Georgia, serif; color: var(--ember); text-align: center; }
+  .card .sub { margin: 0 0 8px; color: var(--dim); font-size: 14px; text-align: center; }
+  .card h3 { margin: 12px 0 4px; font-size: 12px; color: var(--ember); text-transform: uppercase; letter-spacing: .08em; }
+  .card ol { margin: 0; padding-left: 24px; font-size: 14px; } .card li span { float: right; font-weight: 800; color: var(--ember); } .card li.me { color: var(--ember); }
+  .card p { margin: 8px 0 0; font-size: 13px; opacity: .8; text-align: center; }
+  .card .row { display: flex; gap: 8px; margin-top: 10px; } .card .row button { flex: 1; min-height: 44px; border-radius: 12px; border: 1px solid #ffffff33; background: #ffffff12; font-weight: 800; }
+  button.big { width: 100%; min-height: 48px; margin-top: 12px; border: 0; border-radius: 12px; background: var(--flame); color: #fff; font-weight: 800; font-size: 17px; }
+  .tale { padding: 8px 10px; border-radius: 12px; background: #ffffff0c; margin-top: 8px; }
+  .tale b { display: block; font-size: 13px; color: var(--ember); } .tale div { font: 15px/1.45 Georgia, serif; margin: 2px 0 6px; }
+  .tale button { min-height: 36px; padding: 0 10px; border-radius: 10px; border: 1px solid #ffffff33; background: #ffffff10; font-size: 13px; font-weight: 700; margin-right: 6px; }
+</style>
+<script src="https://cdn.multiplayeragent.com/sdk/mp.global.js"></script>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="story"></div>
+<div id="big"></div>
+<div id="turn" hidden>
+  <div id="turnQ"></div><div id="bar"><i></i></div>
+  <div id="mine" hidden><input id="say" maxlength="24" placeholder="Add a word or two…" autocomplete="off" enterkeyhint="send"><button id="send">Add</button></div>
+  <div id="chips"></div>
+</div>
+<div id="net"></div>
+<div id="tools"><button id="voiceBtn" title="Read stories aloud">🔊</button><button id="logBtn" title="Story log">📜</button></div>
+<div class="sheet" id="over" hidden><div class="card">
+  <h2 id="bestT"></h2><div class="sub" id="bestSub"></div>
+  <h3>Votes this story</h3><ol id="scores"></ol>
+  <div class="row"><button id="saveBtn">💾 Save story</button><button id="shareBtn">📤 Share</button></div>
+  <h3>Most-loved storytellers</h3><ol id="board"><li>Loading…</li></ol>
+  <button class="big" id="again">Next story</button><p id="next"></p>
+</div></div>
+<div class="sheet" id="logPanel" hidden><div class="card">
+  <h2>Story log</h2><div class="sub">This fire's last stories, and the ones you saved.</div>
+  <div id="logList"></div>
+  <button class="big" id="logClose">Back to the fire</button>
+</div></div>
+<script>
+/* ═══ CAMPFIRE TALES · a Multiplayer Agent starter ═════════════════════════════════════
+ * Around a campfire at night, everyone builds one story together, a word (or two) each,
+ * in turn, against a timer. Now and then the fire throws in a twist ("now a villain
+ * appears"). At the end the story is read aloud while the words light up, and everyone
+ * votes for the best word. Party, 2–10 players; bot storytellers fill empty seats.
+ *
+ * WHERE THINGS ARE (search for the "── " headers):
+ *   CONFIG ........ timers, story length, how often twists come, bots
+ *   WORDS ......... the little grammar bots (and your suggestion chips) use, the twists
+ *   CONNECTION .... MP_CONNECT, joining, the offline room, who is host
+ *   STORY (HOST) .. the phases (gather, tell, read, vote, done), whose turn it is, twists,
+ *                   bot words, the vote count, the room's story log. Only the host writes these.
+ *   ME ............ adding your word, voting, saving and sharing stories
+ *   SCREEN ........ the story card, the turn bar, results, the story log
+ *   CAMPFIRE ...... drawing the night: sky, trees, the fire and sparks, everyone sitting round
+ *   SOUND ......... crackle and pops (WebAudio) and reading the story aloud (speech synthesis)
+ *
+ * HOW THE MULTIPLAYER WORKS (a relay room: no server code):
+ *   - The story lives in ONE shared field, `game`: {id, v, phase, order (who sits round the
+ *     fire, in turn order), tn (whose turn), turnAt, endsAt, words [[text, who]], tw (the
+ *     current twist), readAt, ms (per word when read aloud), votes}. Only the HOST writes it;
+ *     `v` goes up on every write. Timers are timestamps, so a new host carries straight on.
+ *   - The HOST is the lowest sessionId among live players (heartbeat seen in the last 3s),
+ *     worked out every frame. It also plays the bots and writes `log` (the last few stories).
+ *   - Your word is an intent: mp.send("word", {id, n, w}) to the host, which checks it's your
+ *     turn (n = how many words the story had) and adds it. The host adds its own directly.
+ *     If a turn runs out, the fire whispers a word instead, and the story moves on.
+ *   - Each player writes its OWN entity: `vote` {r, w} (story id, which word), `rdy` (next
+ *     story), `hb` (heartbeat) once a second and `n`/`c` (name, color).
+ *   - ?attract plays offline with bots only and quick turns (the preview is recorded from it).
+ *   - Leaderboard "story-votes": the most votes a player's words got in one story.
+ */
+
+// ── CONFIG ──────────────────────────────────────────────────────────────────────────
+var CONFIG = {
+  seats: 5,             // bot storytellers fill the circle up to this many
+  gatherMs: 5000,       // ms before a story starts
+  turnMs: 15000,        // ms you get to add your word
+  botMs: [1400, 3800],  // a bot thinks this long before adding its word
+  wordsPer: 4,          // each storyteller adds about this many words...
+  minWords: 18, maxWords: 30, // ...but a story is always this long
+  twistEvery: 7,        // a twist every this many words
+  readMs: 430,          // ms per word when the story is read aloud
+  voteMs: 15000,        // ms to vote for the best word
+  doneMs: 15000,        // ms on the results before the next story
+  maxLen: 24,           // longest word or phrase you can add (characters, up to 3 words)
+  logSize: 4,           // stories the room keeps in its log
+  board: "story-votes",
+};
+var BOT_NAMES = ["Old Moss", "Juniper", "Captain Pip", "Willow", "Bramble", "Toast", "Ember", "Hazel"];
+var COLORS = ["#ff7a59", "#5ec8ff", "#ffd166", "#8be27b", "#c48cff", "#ff8fc7", "#56e0c8", "#ffa94d", "#a3b4ff", "#ff6b6b"];
+var NAME_A = ["Cozy", "Sleepy", "Brave", "Silly", "Sparky", "Quiet"], NAME_B = ["Owl", "Fox", "Bear", "Moth", "Raccoon", "Badger"];
+
+// ── WORDS ───────────────────────────────────────────────────────────────────────────
+// Pieces of a story by what can come next. Bots pick from these; you see three as chips.
+var LEX = {
+  open: ["Once upon a time,", "One foggy night,", "Long ago,", "Deep in the woods,", "Last summer,"],
+  det: ["a", "the", "my", "an old", "one"],
+  adj: ["sleepy", "grumpy", "tiny", "enormous", "sparkly", "nervous", "hairy", "invisible", "very polite", "soggy", "glowing", "suspicious"],
+  noun: ["bear", "wizard", "pancake", "raccoon", "ghost", "grandma", "moose", "robot", "frog", "pirate", "marshmallow", "canoe", "squirrel", "tent"],
+  np: ["a sleepy bear", "the old wizard", "a talking moose", "my grumpy uncle", "a tiny dragon", "the camp cook", "a lost robot", "a giant marshmallow", "the moon", "a nervous ghost"],
+  vp: ["tripped", "sang loudly", "found a map", "sneezed", "whispered", "danced", "ran away", "ate everything", "fell asleep", "built a raft", "lost a sock", "started laughing", "hid", "yelled"],
+  pp: ["into the lake", "under a log", "with a spoon", "behind the tent", "on the moon", "across the river", "up a tree", "in the dark"],
+  conj: ["and then", "but", "so", "until", "because"],
+  start: ["Then", "Suddenly,", "Meanwhile,", "Later,", "But", "Luckily,"],
+  end: [".", "!", "...", "for no reason.", "forever."],
+};
+// What can follow what (the grammar), and how bots guess what a word you typed is.
+var NEXT = { begin: ["open", "open", "np"], open: ["np", "det"], start: ["np", "det"], det: ["adj", "noun"], adj: ["noun"], noun: ["vp"], np: ["vp", "vp", "who"], who: ["vp"], vp: ["pp", "np", "end", "conj"], pp: ["end", "conj", "end"], conj: ["np", "det", "vp"], end: ["start"] };
+LEX.who = ["who", "and"];
+var TWISTS = [
+  { say: "Now a villain appears!", np: ["a villain", "the evil queen", "a sneaky goblin", "the Shadow Baker"] },
+  { say: "Suddenly it starts to storm!", np: ["a storm", "the thunder", "a soggy cloud"], vp: ["got soaked", "ran for cover"] },
+  { say: "Someone finds a secret door!", np: ["a secret door", "a hidden tunnel", "a trapdoor"], vp: ["opened it", "knocked twice"] },
+  { say: "Add a sound effect!", np: ["KABOOM!", "a loud BONK", "SPLASH!", "a tiny squeak"] },
+  { say: "Somebody falls in love!", vp: ["fell in love", "blushed", "wrote a poem"], np: ["a handsome toad", "true love"] },
+  { say: "A giant shows up!", np: ["a giant", "an enormous foot", "a very tall stranger"] },
+  { say: "Something magical happens!", vp: ["turned into a frog", "started to float", "glowed purple"], np: ["a magic spell", "a wish"] },
+];
+var WRAP = { say: "Wrap it up! The story ends soon.", vp: ["went home", "lived happily ever after", "never camped again"], end: ["happily ever after.", "and that was that.", "forever."] };
+var DETS = ["a", "an", "the", "my", "his", "her", "their", "our", "some", "one", "every", "your"];
+var PREPS = ["into", "under", "with", "on", "behind", "across", "over", "through", "to", "at", "in", "near", "inside", "from"];
+/** What kind of piece a word or phrase is (its last word decides), so bots know what can follow. */
+function kindOf(text) {
+  var t = String(text || "").trim(), lw = t.toLowerCase().split(/\s+/).pop() || "";
+  if (!t) return "begin";
+  for (var k of ["open", "start", "np", "vp", "pp", "conj", "adj", "noun", "end"]) if (LEX[k].some(function (x) { return x.toLowerCase() === t.toLowerCase(); })) return k;
+  if (/[.!?]$/.test(t)) return "end";
+  if (/,$/.test(t)) return "start";
+  if (DETS.indexOf(lw) >= 0) return "det";
+  if (PREPS.indexOf(lw) >= 0) return "det"; // "into" wants "the …" next, like a determiner would
+  if (LEX.conj.indexOf(lw) >= 0 || lw === "and" || lw === "then") return "conj";
+  if (LEX.adj.indexOf(lw) >= 0 || /(y|ful|ous|ish|less)$/.test(lw)) return "adj";
+  if (/(ed|ing)$/.test(lw)) return "vp";
+  return "noun"; // anything else: treat it like a thing or a name
+}
+/** A few pieces that could come next after `words` (with the current twist's words first). */
+function suggest(words, twist, rnd, n) {
+  var lastText = words.length ? words[words.length - 1][0] : "", kinds = NEXT[kindOf(lastText)] || ["np"], out = [];
+  for (var g = 0; g < 30 && out.length < n; g++) {
+    var k = kinds[Math.floor(rnd() * kinds.length)], pool = (twist && twist[k] && rnd() < 0.7 ? twist[k] : LEX[k]) || LEX.np;
+    var w = pool[Math.floor(rnd() * pool.length)];
+    if (k === "end" && /[.!?]$/.test(lastText)) continue;
+    if (out.indexOf(w) < 0) out.push(w);
+  }
+  return out;
+}
+/** Tidy a word someone typed: trim, at most three words, at most CONFIG.maxLen characters. */
+function clean(w) { return String(w || "").replace(/[<>{}[\]\\]/g, "").replace(/\s+/g, " ").trim().split(" ").slice(0, 3).join(" ").slice(0, CONFIG.maxLen); }
+
+// ── CONNECTION ──────────────────────────────────────────────────────────────────────
+// The builder fills these in for this game. Downloaded from GitHub? Put your own pk_ key here.
+const MP_CONNECT = {
+  key: 'pk_REPLACE_ME',
+  room: 'campfire-tales',
+  endpoint: 'wss://live.multiplayeragent.com',
+  apiUrl: 'https://api.multiplayeragent.com',
+};
+var QS = new URLSearchParams(location.search), ATTRACT = QS.has("attract");
+if (ATTRACT) document.body.classList.add("attract");
+if (ATTRACT) Object.assign(CONFIG, { seats: 6, gatherMs: 300, botMs: [450, 800], minWords: 14, maxWords: 14, twistEvery: 5, readMs: 230, voteMs: 2500, doneMs: 2500 });
+
+/** Same shape as the SDK client, kept in this tab: offline play and ?attract. */
+function localRoom() {
+  var id = "local", state = { entities: { players: { [id]: {} } }, shared: {} }, subs = [], queued = false;
+  var emit = function () { if (!queued) { queued = true; queueMicrotask(function () { queued = false; subs.forEach(function (f) { f(state); }); }); } };
+  var put = function (o, k, v) { if (typeof k === "object") Object.assign(o, k); else o[k] = v; emit(); };
+  return {
+    sessionId: id, state: state, offline: true,
+    me: { set: function (k, v) { put(state.entities.players[id], k, v); } },
+    setShared: function (k, v) { put(state.shared, k, v); },
+    onState: function (f) { subs.push(f); f(state); }, onJoin: function () {}, onLeave: function () {}, on: function () {}, send: function () {},
+    onDisconnect: function () {}, onReconnect: function () {}, leave: async function () {},
+  };
+}
+async function connect() {
+  if (ATTRACT || typeof MP === "undefined") return localRoom();
+  try {
+    var mp = await Promise.race([MP.join(Object.assign({}, MP_CONNECT)), new Promise(function (_, no) { setTimeout(function () { no(new Error("timed out")); }, 10000); })]);
+    window.mp = mp; // the builder calls window.mp.leave() when the page closes
+    return mp;
+  } catch (e) {
+    console.warn("Playing offline:", e && e.message);
+    return localRoom();
+  }
+}
+function parse(v, fb) { if (typeof v !== "string") return fb; try { return JSON.parse(v); } catch (e) { return fb; } }
+var memo = new Map();
+/** A JSON field, parsed once per change (read-only: never mutate what this returns). */
+function cached(key, raw, fb) { var m = memo.get(key); if (m && m.raw === raw) return m.v; var v = parse(raw, fb); memo.set(key, { raw: raw, v: v }); return v; }
+var net = null, S = { entities: { players: {} }, shared: {} }, netDown = false;
+var seenHb = new Map();
+function livePlayers() {
+  var now = performance.now(), out = [];
+  for (var [id, p] of Object.entries(S.entities.players || {})) {
+    var s = seenHb.get(id);
+    if (!s || s.hb !== p.hb) seenHb.set(id, { hb: p.hb, at: now });
+    if (id === net.sessionId || now - seenHb.get(id).at < 3000) out.push(id);
+  }
+  return out.sort();
+}
+var hostHold = 0, lastTick = performance.now(); // after a freeze, no hosting before hostHold (see frame())
+function isHost() { return performance.now() > hostHold && performance.now() - lastTick < 1000 && livePlayers()[0] === net.sessionId; }
+function mulberry32(a) { return function () { a |= 0; a = (a + 0x6d2b79f5) | 0; var t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
+// ── STORY (HOST) ────────────────────────────────────────────────────────────────────
+var host = { last: null, was: false, botAt: 0, botFor: "" };
+/** The story as state has it, or the host's own newer write that hasn't come back yet. `v` only goes up. */
+function game() { var g = cached("game", S.shared.game, null); return host.last && isHost() && (!g || host.last.v > g.v) ? host.last : g; }
+function writeGame(g) { var cur = cached("game", S.shared.game, null); g = Object.assign({}, g, { v: Math.max(game() ? game().v : 0, cur ? cur.v : 0) + 1 }); host.last = g; net.setShared("game", JSON.stringify(g)); return g; }
+function humans() { return livePlayers().filter(function (id) { return !(ATTRACT && id !== net.sessionId); }); }
+function nameOf(id) { if (id === net.sessionId) return myName; var p = S.entities.players[id]; return String((p && p.n) || "Player"); }
+function colorOf(id) { if (id === net.sessionId) return myColor; var p = S.entities.players[id]; return (p && p.c) || "#ccc"; }
+/** A new story: everyone here (humans, then bots to fill the circle) sits round the fire in a random order. */
+function newStory(id) {
+  var people = humans().map(function (h) { return [h, nameOf(h).slice(0, 14), colorOf(h)]; }), want = Math.max(0, CONFIG.seats - people.length);
+  var names = BOT_NAMES.slice().sort(function () { return Math.random() - 0.5; }), used = new Set(people.map(function (p) { return p[2]; })), free = COLORS.filter(function (c) { return !used.has(c); });
+  for (var i = 0; i < want; i++) people.push(["bot" + i, names[i], free[i] || COLORS[i]]);
+  people.sort(function () { return Math.random() - 0.5; });
+  var target = Math.max(CONFIG.minWords, Math.min(CONFIG.maxWords, people.length * CONFIG.wordsPer));
+  return { id: id, phase: "gather", order: people, tn: 0, turnAt: 0, endsAt: Date.now() + CONFIG.gatherMs, words: [], target: target, tw: -1, twists: [], seed: (Math.random() * 1e9) | 0, readAt: 0, ms: CONFIG.readMs, votes: {} };
+}
+var isBot = function (id) { return String(id).indexOf("bot") === 0; };
+/** Add a word for the storyteller at seat `who` (-1 = the fire), then pass the turn and maybe throw in a twist. */
+function addWord(g, w, who) {
+  var G = Object.assign({}, g, { words: g.words.concat([[w, who]]) }), n = G.words.length, t = Date.now();
+  if (n >= G.target) return Object.assign(G, { phase: "read", readAt: t + 1200, endsAt: t + 1200 + n * G.ms + 2500, tn: -1 });
+  if (n === G.target - 3) G.tw = 99; // the last stretch: wrap it up
+  else if (n % CONFIG.twistEvery === 0) { var r = mulberry32(G.seed + n); G.tw = Math.floor(r() * TWISTS.length); G.twists = G.twists.concat([n]); }
+  return Object.assign(G, nextTurn(G, (g.tn + 1) % G.order.length), {});
+}
+function nextTurn(G, tn) { var t = Date.now(); return { tn: tn, turnAt: t, endsAt: t + CONFIG.turnMs }; }
+var twistOf = function (g) { return g.tw === 99 ? WRAP : g.tw >= 0 ? TWISTS[g.tw] : null; };
+/** A word from the host for a bot (or from the fire for someone who ran out of time). */
+var botWord = function (g) { return suggest(g.words, twistOf(g), Math.random, 1)[0] || "and then"; };
+/** A "word" intent (or the host's own word): only from whoever's turn it is, for this story at this length. */
+function applyWord(from, msg) {
+  var g = game();
+  if (!g || g.phase !== "tell" || !msg || msg.id !== g.id || msg.n !== g.words.length) return;
+  var seat = g.order[g.tn], w = clean(msg.w);
+  if (!seat || seat[0] !== from || !w) return;
+  writeGame(addWord(g, w, g.tn));
+}
+/** Count the votes: votes per word, and per storyteller. */
+function tally(g) {
+  var votes = {};
+  var add = function (w) { if (g.words[w] && g.words[w][1] >= 0) votes[w] = (votes[w] || 0) + 1; };
+  humans().forEach(function (h) { var v = h === net.sessionId ? me.vote : cached("vote:" + h, (S.entities.players[h] || {}).vote, null); if (v && v.r === g.id) add(v.w); });
+  g.order.forEach(function (o, seat) { if (!isBot(o[0])) return; var pool = g.words.map(function (w, i) { return i; }).filter(function (i) { return g.words[i][1] >= 0 && g.words[i][1] !== seat; }); if (pool.length) add(pool[Math.floor(Math.random() * pool.length)]); });
+  return votes;
+}
+/** The story as plain text: words joined, a full stop at the end. */
+function storyText(g) { var s = g.words.map(function (w) { return w[0]; }).join(" ").replace(/\s+([,.!?])/g, "$1"); return /[.!?]$/.test(s) ? s : s + "."; }
+function titleOf(g) { var w = g.words.filter(function (x) { return x[1] >= 0 && kindOf(x[0]) !== "open"; }).map(function (x) { return x[0]; }).slice(0, 3).join(" "); return "Tale #" + g.id + (w ? ": " + w.replace(/[,.!?]+$/, "") + "…" : ""); }
+/** Keep the room's last few stories in the shared `log` (trimmed to fit one field). */
+function writeLog(g) {
+  var log = (cached("log", S.shared.log, []) || []).filter(function (x) { return x.id !== g.id; });
+  log.unshift({ id: g.id, t: titleOf(g), s: storyText(g) });
+  log = log.slice(0, CONFIG.logSize);
+  while (log.length > 1 && JSON.stringify(log).length > 1900) log.pop();
+  net.setShared("log", JSON.stringify(log));
+}
+function hostTick() {
+  var g = game(), t = Date.now();
+  if (!host.was) { host.was = true; host.botFor = ""; } // adopting: nothing to carry but the timestamps already in state
+  if (!g) g = writeGame(newStory(1));
+  if (g.phase === "gather" && t >= g.endsAt) g = writeGame(Object.assign({}, g, { phase: "tell" }, nextTurn(g, 0)));
+  else if (g.phase === "tell") {
+    var seat = g.order[g.tn], who = seat && seat[0], key = g.id + ":" + g.words.length;
+    var gone = who && !isBot(who) && humans().indexOf(who) < 0 && !(ATTRACT && who === net.sessionId);
+    if (who && isBot(who)) { if (host.botFor !== key) { host.botFor = key; host.botAt = t + CONFIG.botMs[0] + Math.random() * (CONFIG.botMs[1] - CONFIG.botMs[0]); } if (t >= host.botAt) g = writeGame(addWord(g, botWord(g), g.tn)); }
+    else if (t >= g.endsAt || gone) g = writeGame(addWord(g, botWord(g), -1)); // out of time (or gone): the fire whispers a word
+    if (g.phase === "tell") { // friends who just sat down join the circle
+      var seated = new Set(g.order.map(function (o) { return o[0]; })), fresh = humans().filter(function (h) { return !seated.has(h); });
+      if (fresh.length && g.order.length < 12) g = writeGame(Object.assign({}, g, { order: g.order.concat(fresh.map(function (h) { return [h, nameOf(h).slice(0, 14), colorOf(h)]; })) }));
+    }
+  } else if (g.phase === "read" && t >= g.endsAt) g = writeGame(Object.assign({}, g, { phase: "vote", endsAt: t + CONFIG.voteMs }));
+  else if (g.phase === "vote") {
+    var people = humans(), voted = people.every(function (h) { var v = h === net.sessionId ? me.vote : cached("vote:" + h, (S.entities.players[h] || {}).vote, null); return v && v.r === g.id; });
+    if (t >= g.endsAt || (voted && !ATTRACT && people.length)) { g = writeGame(Object.assign({}, g, { phase: "done", votes: tally(g), endsAt: t + CONFIG.doneMs })); writeLog(g); }
+  } else if (g.phase === "done") {
+    var ready = humans().length && humans().every(function (h) { return +(h === net.sessionId ? me.rdy : (S.entities.players[h] || {}).rdy) === g.id; });
+    if (t >= g.endsAt || (ready && !ATTRACT)) writeGame(newStory(g.id + 1));
+  }
+}
+
+// ── ME ──────────────────────────────────────────────────────────────────────────────
+var myName = "";
+try { myName = localStorage.getItem("mpa-name") || ""; } catch (e) {}
+myName = myName || NAME_A[Math.floor(Math.random() * NAME_A.length)] + " " + NAME_B[Math.floor(Math.random() * NAME_B.length)];
+var myColor = COLORS[0]; // picked on join: the first color nobody in the room has
+var me = { vote: null, rdy: 0, sentFor: "", autoAt: 0, chipsFor: "", spoke: -1, heard: false, voice: true };
+try { me.voice = localStorage.getItem("campfire-voice") !== "off"; } catch (e) {}
+function sendWord(w) {
+  var g = game(); w = clean(w);
+  if (!g || g.phase !== "tell" || !w || !g.order[g.tn] || g.order[g.tn][0] !== net.sessionId) return;
+  var key = g.id + ":" + g.words.length;
+  if (me.sentFor === key) return; // once per turn
+  me.sentFor = key; $("say").value = "";
+  var msg = { id: g.id, n: g.words.length, w: w };
+  if (isHost()) applyWord(net.sessionId, msg); else net.send("word", msg);
+  pop();
+}
+function castVote(i) {
+  var g = game();
+  if (!g || g.phase !== "vote" || !g.words[i] || g.words[i][1] < 0) return;
+  var seat = g.order[g.words[i][1]];
+  if (seat && seat[0] === net.sessionId) return; // not your own word
+  me.vote = { r: g.id, w: i }; net.me.set("vote", JSON.stringify(me.vote)); pop(); drawStory(g, true);
+}
+function savedTales() { try { return JSON.parse(localStorage.getItem("campfire-tales-log") || "[]"); } catch (e) { return []; } }
+function saveTale(g) {
+  var list = savedTales().filter(function (x) { return x.t !== titleOf(g) || x.s !== storyText(g); });
+  list.unshift({ t: titleOf(g), s: storyText(g), at: Date.now() });
+  try { localStorage.setItem("campfire-tales-log", JSON.stringify(list.slice(0, 30))); toastBtn($("saveBtn"), "✓ Saved"); } catch (e) { toastBtn($("saveBtn"), "Couldn't save"); }
+}
+function shareTale(title, text, btn) {
+  var body = title + "\n\n" + text + "\n\n(told around the fire in Campfire Tales)";
+  if (navigator.share) navigator.share({ title: title, text: body }).catch(function () {});
+  else if (navigator.clipboard) navigator.clipboard.writeText(body).then(function () { toastBtn(btn, "✓ Copied"); }).catch(function () { toastBtn(btn, "Couldn't copy"); });
+}
+function toastBtn(b, text) { if (!b) return; var old = b.dataset.old || b.textContent; b.dataset.old = old; b.textContent = text; setTimeout(function () { b.textContent = old; }, 1500); }
+/** ?attract: you take your turns too, from the suggestions. */
+function autopilot(g, now) {
+  if (!ATTRACT || g.phase !== "tell" || !g.order[g.tn] || g.order[g.tn][0] !== net.sessionId) return;
+  if (!me.autoAt) me.autoAt = now + 600;
+  if (now >= me.autoAt) { me.autoAt = 0; sendWord(botWord(g)); }
+}
+
+// ── SCREEN ──────────────────────────────────────────────────────────────────────────
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+$("send").onclick = function () { sendWord($("say").value); };
+$("say").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); sendWord($("say").value); } });
+$("chips").onclick = function (e) { var b = e.target.closest("button"); if (b) sendWord(b.dataset.w); };
+$("again").onclick = function () { var g = game(); if (g) { me.rdy = g.id; net.me.set("rdy", g.id); pop(); $("next").textContent = "Waiting for the others…"; } };
+$("saveBtn").onclick = function () { var g = game(); if (g) saveTale(g); };
+$("shareBtn").onclick = function () { var g = game(); if (g) shareTale(titleOf(g), storyText(g), $("shareBtn")); };
+$("logBtn").onclick = function () { drawLog(); $("logPanel").hidden = false; };
+$("logClose").onclick = function () { $("logPanel").hidden = true; };
+$("voiceBtn").onclick = function () { me.voice = !me.voice; try { localStorage.setItem("campfire-voice", me.voice ? "on" : "off"); } catch (e) {} drawVoice(); if (!me.voice && window.speechSynthesis) speechSynthesis.cancel(); };
+function drawVoice() { $("voiceBtn").textContent = me.voice ? "🔊" : "🔇"; }
+drawVoice();
+$("logList").onclick = function (e) { var b = e.target.closest("button"); if (!b) return; var t = b.closest(".tale"); if (b.dataset.a === "share") shareTale(t.dataset.t, t.dataset.s, b); if (b.dataset.a === "read") readAloud(t.dataset.s); };
+function drawLog() {
+  var room = cached("log", S.shared.log, []) || [], mine = savedTales();
+  var tale = function (x) { return '<div class="tale" data-t="' + esc(x.t) + '" data-s="' + esc(x.s) + '"><b>' + esc(x.t) + "</b><div>" + esc(x.s) + '</div><button data-a="read">🔊 Read</button><button data-a="share">📤 Share</button></div>'; };
+  $("logList").innerHTML = "<h3>Told at this fire</h3>" + (room.length ? room.map(tale).join("") : "<p>No finished stories yet.</p>") + "<h3>Saved on this device</h3>" + (mine.length ? mine.map(tale).join("") : "<p>Save a story from the results to keep it here.</p>");
+}
+var shownWords = -1, shownKey = "";
+/** The story card: the twist, then the words so far (lit one by one when read aloud, buttons when voting). */
+function drawStory(g, force) {
+  var t = Date.now(), lit = g.phase === "read" ? Math.floor((t - g.readAt) / g.ms) : -1, voting = g.phase === "vote";
+  var key = g.id + ":" + g.phase + ":" + g.words.length + ":" + lit + ":" + g.tw + ":" + (me.vote && me.vote.r === g.id ? me.vote.w : -1);
+  if (!force && key === shownKey) return;
+  var fresh = g.words.length > shownWords && shownKey.split(":")[0] === String(g.id);
+  shownKey = key;
+  if (g.phase === "gather") { $("story").innerHTML = ""; shownWords = 0; return; }
+  var tw = twistOf(g), head = g.phase === "tell" && tw ? '<div class="twist">' + (g.tw === 99 ? "⏳ " : "🌩 Twist: ") + esc(tw.say) + "</div>" : g.phase === "vote" ? '<div class="title">Tap the best word (not your own)</div>' : g.phase === "read" || g.phase === "done" ? '<div class="title">' + esc(titleOf(g)) + "</div>" : '<div class="title">Our story so far</div>';
+  var mySeat = g.order.findIndex(function (o) { return o[0] === net.sessionId; }), tally = g.votes || {};
+  var body = g.words.map(function (w, i) {
+    var seat = g.order[w[1]], color = seat ? seat[2] : "#ffcf8a", style = 'style="border-bottom-color:' + esc(color) + '"';
+    if (voting) {
+      var mine = w[1] === mySeat || w[1] < 0, on = me.vote && me.vote.r === g.id && me.vote.w === i;
+      return '<button data-i="' + i + '" class="' + (mine ? "mine" : "") + (on ? " on" : "") + '" ' + style + ">" + esc(w[0]) + "</button>";
+    }
+    var cls = (w[1] < 0 ? "fire " : "") + (i === lit ? "lit " : "") + (fresh && i === g.words.length - 1 ? "new" : "");
+    return '<span class="' + cls + '" ' + style + ">" + esc(w[0]) + (g.phase === "done" && tally[i] ? ' <i style="font-style:normal;color:#ffb347;font:800 12px system-ui">★' + tally[i] + "</i>" : "") + "</span>";
+  }).map(function (html, i) { return (i && !/^[.,!?]/.test(g.words[i][0]) ? " " : "") + html; }).join(""); // no gap before a lone "." or "!"
+  $("story").innerHTML = head + '<div id="text">' + (body || '<span class="fire">…</span>') + "</div>";
+  if (voting) $("text").onclick = function (e) { var b = e.target.closest("button"); if (b) castVote(+b.dataset.i); };
+  shownWords = g.words.length;
+  if (g.phase === "tell" || g.phase === "read") { var litEl = $("story").querySelector(".lit"); if (litEl) litEl.scrollIntoView({ block: "nearest" }); else $("story").scrollTop = $("story").scrollHeight; }
+}
+var board = null, boardFor = -1;
+function screen(g) {
+  var t = Date.now(), left = Math.max(0, Math.ceil((g.endsAt - t) / 1000)), seat = g.order[g.tn], mine = g.phase === "tell" && seat && seat[0] === net.sessionId;
+  drawStory(g);
+  var n = livePlayers().length;
+  $("net").textContent = ATTRACT ? "" : net.offline ? "Offline: playing with bots" : netDown ? "Reconnecting…" : "Online · " + n + " player" + (n === 1 ? "" : "s") + (isHost() ? " · you run the fire" : "");
+  $("tools").hidden = ATTRACT;
+  $("big").innerHTML = g.phase === "gather" ? "<b>Gather round the fire…</b><small>A story, one word each, in turn. The first teller goes in " + left + "</small>" : g.phase === "read" && t < g.readAt ? "<b>And now, the story…</b>" : "";
+  // The turn bar: your input and chips on your turn, otherwise who is thinking.
+  var showTurn = !ATTRACT && (g.phase === "tell" || g.phase === "vote");
+  $("turn").hidden = !showTurn; document.body.classList.toggle("turning", showTurn);
+  if (showTurn) {
+    var span = g.phase === "tell" ? CONFIG.turnMs : CONFIG.voteMs;
+    $("bar").firstElementChild.style.transform = "scaleX(" + Math.max(0, Math.min(1, (g.endsAt - t) / span)) + ")";
+    if (g.phase === "vote") { $("turnQ").textContent = (me.vote && me.vote.r === g.id ? "Vote in! " : "Vote for the best word · ") + left + "s"; $("mine").hidden = true; $("chips").innerHTML = ""; }
+    else if (mine) {
+      $("turnQ").textContent = "Your turn! Add a word or two · " + left + "s";
+      $("mine").hidden = false;
+      var ck = g.id + ":" + g.words.length;
+      if (me.chipsFor !== ck) { me.chipsFor = ck; $("chips").innerHTML = suggest(g.words, twistOf(g), Math.random, 3).map(function (w) { return '<button data-w="' + esc(w) + '">' + esc(w) + "</button>"; }).join(""); if (!touchUI) $("say").focus(); }
+    } else { $("turnQ").textContent = (seat ? seat[1] : "Someone") + " is thinking… " + left + "s"; $("mine").hidden = true; $("chips").innerHTML = ""; me.chipsFor = ""; }
+  }
+  band.top = $("story").innerHTML ? $("story").getBoundingClientRect().bottom : 0; band.bot = $("turn").hidden ? H : $("turn").getBoundingClientRect().top;
+  var over = g.phase === "done" && !ATTRACT;
+  $("over").hidden = !over;
+  if (over) drawResults(g, left);
+}
+function drawResults(g, left) {
+  var votes = g.votes || {}, best = -1;
+  Object.keys(votes).forEach(function (i) { if (best < 0 || votes[i] > votes[best]) best = +i; });
+  var tied = Object.keys(votes).filter(function (i) { return best >= 0 && votes[i] === votes[best]; }).length > 1;
+  var bw = g.words[best], by = bw && g.order[bw[1]];
+  $("bestT").textContent = bw ? (tied ? "A tie for best word!" : "“" + bw[0] + "”") : "The fire liked every word";
+  $("bestSub").textContent = bw ? (tied ? "Several words got " + votes[best] + " votes" : "Best word, by " + (by[0] === net.sessionId ? "you" : by[1]) + " · " + votes[best] + " vote" + (votes[best] === 1 ? "" : "s")) : "No votes this time.";
+  var per = g.order.map(function (o, seat) { var s = 0; Object.keys(votes).forEach(function (i) { if (g.words[i] && g.words[i][1] === seat) s += votes[i]; }); return [o, s]; }).sort(function (a, b) { return b[1] - a[1]; });
+  $("scores").innerHTML = per.map(function (x) { return '<li class="' + (x[0][0] === net.sessionId ? "me" : "") + '"><b style="color:' + esc(x[0][2]) + '">●</b> ' + esc(x[0][0] === net.sessionId ? "You" : x[0][1]) + "<span>" + x[1] + " ★</span></li>"; }).join("");
+  if (me.rdy !== g.id) $("next").textContent = "Next story in " + left + "s";
+  if (boardFor !== g.id) {
+    boardFor = g.id;
+    var mine = per.find(function (x) { return x[0][0] === net.sessionId; }), list = $("board");
+    if (!board) list.innerHTML = "<li>Leaderboards need a connection.</li>";
+    else (mine && mine[1] > 0 ? board.submit(mine[1]).catch(function () { return null; }) : Promise.resolve()).then(function () { return board.top(10); }).then(function (r) {
+      list.innerHTML = r.entries.length ? r.entries.map(function (e) { return "<li>" + esc(e.username || "Player") + "<span>" + e.score + " ★</span></li>"; }).join("") : "<li>No votes yet. Tell a good one.</li>";
+    }).catch(function () { list.innerHTML = "<li>Couldn't load the leaderboard.</li>"; });
+  }
+}
+/** Keep a color nobody else has: the later sessionId gives way, and the bots' colors count as taken. */
+function fixColor() {
+  var others = Object.entries(S.entities.players || {}).filter(function (e) { return e[0] !== net.sessionId; }), g = game(), bots = g ? g.order.filter(function (o) { return isBot(o[0]); }).map(function (o) { return o[2]; }) : [];
+  if (!others.some(function (e) { return e[0] < net.sessionId && e[1].c === myColor; }) && bots.indexOf(myColor) < 0) return;
+  var used = new Set(others.map(function (e) { return e[1].c; }).concat(bots));
+  myColor = COLORS.find(function (c) { return !used.has(c); }) || myColor;
+  net.me.set("c", myColor);
+}
+var touchUI = matchMedia("(pointer: coarse)").matches;
+addEventListener("pointerdown", function () { me.heard = true; unlockAudio(); });
+addEventListener("keydown", function () { me.heard = true; unlockAudio(); });
+
+// ── CAMPFIRE ────────────────────────────────────────────────────────────────────────
+var cv = $("cv"), ctx = cv.getContext("2d"), W = 0, H = 0, DPR = 1;
+function fit() { DPR = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); }
+addEventListener("resize", fit); addEventListener("orientationchange", fit); fit();
+var starRnd = mulberry32(7), STARS = Array.from({ length: 140 }, function () { return { x: starRnd(), y: starRnd() * 0.6, r: 0.4 + starRnd() * 1.4, p: starRnd() * 6 }; });
+var TREES = Array.from({ length: 26 }, function (_, i) { return { x: i / 25 + (starRnd() - 0.5) * 0.03, h: 0.5 + starRnd() * 0.6, w: 0.5 + starRnd() * 0.3 }; });
+var sparks = [], flare = 0, flareColor = "#b48cff";
+/** Where the fire is, and how big the circle round it is, for this screen. */
+var band = { top: 0, bot: 0 }; // the free strip between the story card and the turn bar (measured in screen())
+function layout() {
+  var tall = H > W, top = band.top + (tall ? 90 : 70), bot = (band.bot || H) - 34, fx = W / 2, fy = top + (bot - top) * 0.56;
+  var rx = Math.min(W * (tall ? 0.36 : 0.32), 380), ry = Math.max(24, Math.min(rx * (tall ? 0.42 : 0.3), bot - fy));
+  return { fx: fx, fy: fy, rx: rx, ry: ry, s: Math.max(0.55, Math.min(1.2, rx / 300, (bot - top) / 280)) * (ATTRACT ? 1.3 : 1) }; // (?attract: bigger, for the small preview)
+}
+function drawSky(t) {
+  var g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#070a22"); g.addColorStop(0.55, "#1b1f4a"); g.addColorStop(1, "#2a1e2e"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  STARS.forEach(function (s) { ctx.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(t * 1.3 + s.p)); ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(s.x * W, s.y * H, s.r, 0, 7); ctx.fill(); });
+  ctx.globalAlpha = 1;
+  var mx = W * 0.82, my = H * 0.14, mr = Math.min(W, H) * 0.05; ctx.fillStyle = "#fff6d8"; ctx.shadowColor = "#fff6d8"; ctx.shadowBlur = 30; ctx.beginPath(); ctx.arc(mx, my, mr, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+  ctx.fillStyle = "#e8dcb8"; [[-0.3, -0.2, 0.22], [0.25, 0.15, 0.16], [-0.05, 0.35, 0.12]].forEach(function (c) { ctx.beginPath(); ctx.arc(mx + c[0] * mr, my + c[1] * mr, c[2] * mr, 0, 7); ctx.fill(); });
+  var L = layout(), base = L.fy - L.ry * 1.6;
+  ctx.fillStyle = "#0a0d20"; TREES.forEach(function (tr) { var x = tr.x * W, h = tr.h * H * 0.28, w = tr.w * h * 0.5; ctx.beginPath(); ctx.moveTo(x - w, base); ctx.lineTo(x, base - h); ctx.lineTo(x + w, base); ctx.fill(); });
+  var gr = ctx.createLinearGradient(0, base, 0, H); gr.addColorStop(0, "#14101e"); gr.addColorStop(1, "#1e1520"); ctx.fillStyle = gr; ctx.fillRect(0, base, W, H - base);
+}
+function drawFire(t, heat) {
+  var L = layout(), x = L.fx, y = L.fy, s = L.s * (1 + heat * 0.25);
+  var glow = ctx.createRadialGradient(x, y - 20 * s, 10, x, y, Math.max(W, H) * 0.55); glow.addColorStop(0, "rgba(255,150,60," + (0.42 + 0.06 * Math.sin(t * 9)) + ")"); glow.addColorStop(0.35, "rgba(255,110,40,0.12)"); glow.addColorStop(1, "rgba(255,90,30,0)"); ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+  for (var k = 0; k < 9; k++) { var a = (k / 9) * Math.PI * 2; ctx.fillStyle = k % 2 ? "#4a4250" : "#5a5260"; ctx.beginPath(); ctx.ellipse(x + Math.cos(a) * 46 * s, y + Math.sin(a) * 16 * s, 13 * s, 8 * s, 0, 0, 7); ctx.fill(); }
+  ctx.fillStyle = "#5b3420"; ctx.save(); ctx.translate(x, y); ctx.rotate(0.35); ctx.fillRect(-42 * s, -6 * s, 84 * s, 13 * s); ctx.rotate(-0.7); ctx.fillRect(-42 * s, -6 * s, 84 * s, 13 * s); ctx.restore();
+  // Flames: three layers of flickering tongues, hottest in the middle. A twist makes them flare a magic color.
+  var layers = [[flare > 0 ? flareColor : "#ff5a1f", 1], ["#ffa53a", 0.72], ["#fff1b8", 0.4]];
+  layers.forEach(function (ly, li) {
+    ctx.fillStyle = ly[0]; ctx.globalAlpha = 0.9; ctx.beginPath(); ctx.moveTo(x - 34 * s * ly[1], y);
+    for (var i = 0; i <= 6; i++) { var px = x + (-34 + (68 * i) / 6) * s * ly[1], tall = (i % 2 ? 0.45 : 1) * (70 + 25 * Math.sin(t * (7 + i) + li * 2 + i)) * s * ly[1] * (1 + heat * 0.4 + flare * 0.5); ctx.quadraticCurveTo(px - 6 * s, y - tall * 0.6, px, y - tall); }
+    ctx.lineTo(x + 34 * s * ly[1], y); ctx.closePath(); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+  if (Math.random() < 0.5 + heat) sparks.push({ x: x + (Math.random() - 0.5) * 40 * s, y: y - 40 * s, vx: (Math.random() - 0.5) * 30, vy: -60 - Math.random() * 90, life: 1 + Math.random() * 1.2, c: flare > 0 && Math.random() < 0.5 ? flareColor : "#ffcf6a" });
+}
+function drawSparks(dt) {
+  for (var i = sparks.length - 1; i >= 0; i--) { var p = sparks[i]; p.life -= dt; p.x += (p.vx + Math.sin(p.y * 0.05) * 20) * dt; p.y += p.vy * dt; if (p.life <= 0) { sparks.splice(i, 1); continue; } ctx.globalAlpha = Math.min(1, p.life); ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, 2.5, 2.5); }
+  ctx.globalAlpha = 1;
+}
+/** One storyteller on a log: a hoodie in their color, lit from the fire, a speech bubble with their latest word. */
+function drawTeller(p, t) {
+  var s = p.s, x = p.x, y = p.y - (p.active ? Math.abs(Math.sin(t * 6)) * 5 * s : 0), side = Math.sign(x - layout().fx) || 1;
+  ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(p.x, p.y + 4 * s, 30 * s, 8 * s, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = "#3d2618"; ctx.beginPath(); ctx.roundRect(x - 34 * s, p.y - 2 * s, 68 * s, 12 * s, 6 * s); ctx.fill(); // the log they sit on
+  ctx.fillStyle = p.color; ctx.beginPath(); ctx.ellipse(x, y - 26 * s, 24 * s, 28 * s, 0, 0, 7); ctx.fill();
+  var lit = ctx.createLinearGradient(x + side * 24 * s, 0, x - side * 24 * s, 0); lit.addColorStop(0, "rgba(255,170,90,0.0)"); lit.addColorStop(1, "rgba(255,170,90,0.35)"); ctx.fillStyle = "rgba(0,0,10,0.25)"; ctx.beginPath(); ctx.ellipse(x - side * 6 * s, y - 26 * s, 20 * s, 26 * s, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = "#f2c79a"; ctx.beginPath(); ctx.arc(x, y - 62 * s, 16 * s, 0, 7); ctx.fill();
+  ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(x, y - 64 * s, 18 * s, Math.PI * 1.05, Math.PI * 1.95); ctx.fill(); // the hood
+  ctx.fillStyle = "#2a1a10"; for (var e = -1; e <= 1; e += 2) { ctx.beginPath(); ctx.arc(x + e * 5.5 * s - side * 0, y - 63 * s, 1.8 * s, 0, 7); ctx.fill(); }
+  ctx.strokeStyle = "#2a1a10"; ctx.lineWidth = 1.5 * s; ctx.beginPath(); ctx.arc(x, y - 58 * s, 4 * s, 0.2, Math.PI - 0.2); ctx.stroke();
+  ctx.font = "800 " + Math.round(12 * Math.max(0.9, s)) + "px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "top";
+  if (!ATTRACT || p.active) { ctx.fillStyle = "rgba(0,0,0,0.5)"; var nw = ctx.measureText(p.name).width + 10; ctx.beginPath(); ctx.roundRect(x - nw / 2, p.y + 12 * s, nw, 17, 7); ctx.fill(); ctx.fillStyle = p.me ? "#ffd166" : "#fff"; ctx.fillText(p.name, x, p.y + 13 * s); }
+  var said = p.bubble;
+  if (said) {
+    ctx.font = "700 " + Math.round(16 * Math.max(0.9, s)) + "px Georgia, serif"; var bw = ctx.measureText(said).width + 18, bx = x, by = y - 98 * s;
+    ctx.globalAlpha = p.bubbleA; ctx.fillStyle = "#fff4e3"; ctx.beginPath(); ctx.roundRect(bx - bw / 2, by - 26, bw, 28, 12); ctx.fill(); ctx.beginPath(); ctx.moveTo(bx - 6, by + 1); ctx.lineTo(bx, by + 9); ctx.lineTo(bx + 6, by + 1); ctx.fill();
+    ctx.fillStyle = "#2a1600"; ctx.textBaseline = "middle"; ctx.fillText(said, bx, by - 12); ctx.globalAlpha = 1;
+  }
+}
+var bubbles = new Map(); // seat -> { w, at } on our clock
+function drawCircle(g, t, now) {
+  var L = layout(), seats = g ? g.order : humans().map(function (h) { return [h, nameOf(h), colorOf(h)]; }), n = seats.length, people = [];
+  seats.forEach(function (o, i) {
+    var a = Math.PI / 2 + (i / Math.max(1, n)) * Math.PI * 2 + 0.35, x = L.fx + Math.cos(a) * L.rx, y = L.fy + Math.sin(a) * L.ry, depth = (Math.sin(a) + 1) / 2;
+    var active = g && g.phase === "tell" && g.tn === i, b = bubbles.get(i), bub = null, ba = 0;
+    if (active) { bub = "•".repeat(1 + (Math.floor(now / 300) % 3)); ba = 0.9; } // thinking…
+    if (b && now - b.at < 2600) { bub = b.w; ba = Math.min(1, (2600 - (now - b.at)) / 500); }
+    people.push({ x: x, y: y, s: L.s * (0.78 + depth * 0.32), color: o[2], name: o[0] === net.sessionId ? "You" : o[1], me: o[0] === net.sessionId, active: active, bubble: bub, bubbleA: ba, back: Math.sin(a) < 0 });
+  });
+  return people;
+}
+function drawScene(g, t, dt, now) {
+  drawSky(t);
+  var heat = g && g.phase === "read" ? 0.6 : g && g.phase === "done" ? 0.3 : 0, people = drawCircle(g, t, now);
+  people.filter(function (p) { return p.back; }).sort(function (a, b) { return a.y - b.y; }).forEach(function (p) { drawTeller(p, t); });
+  drawFire(t, heat); drawSparks(dt);
+  people.filter(function (p) { return !p.back; }).sort(function (a, b) { return a.y - b.y; }).forEach(function (p) { drawTeller(p, t); });
+  flare = Math.max(0, flare - dt * 0.6);
+}
+
+// ── SOUND ───────────────────────────────────────────────────────────────────────────
+var AC = null, noiseBuf = null, nextCrackle = 0;
+function unlockAudio() {
+  if (AC || ATTRACT) return;
+  try { AC = new AudioContext(); noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate); var d = noiseBuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; } catch (e) { AC = null; }
+}
+function hiss(len, vol, hp) { if (!AC) return; var t0 = AC.currentTime, s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain(); s.buffer = noiseBuf; f.type = "bandpass"; f.frequency.value = hp; g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len); s.connect(f).connect(g).connect(AC.destination); s.start(t0, Math.random() * 0.8); s.stop(t0 + len + 0.02); }
+function tone(f, len, vol, type) { if (!AC) return; var t0 = AC.currentTime, o = AC.createOscillator(), g = AC.createGain(); o.type = type || "sine"; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len); o.connect(g).connect(AC.destination); o.start(t0); o.stop(t0 + len + 0.05); }
+function pop() { tone(660, 0.12, 0.12, "triangle"); setTimeout(function () { tone(990, 0.15, 0.08, "triangle"); }, 60); }
+/** The fire crackles now and then: little bursts of filtered noise. */
+function crackle(now) { if (!AC || now < nextCrackle) return; nextCrackle = now + 120 + Math.random() * 500; hiss(0.03 + Math.random() * 0.05, 0.05 + Math.random() * 0.12, 1500 + Math.random() * 3000); }
+/** Read a story aloud with the browser's own voice (only after you've tapped once, and only if the voice is on). */
+function readAloud(text) {
+  if (!window.speechSynthesis || !me.voice || ATTRACT) return;
+  try { speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(text); u.rate = 0.92; u.pitch = 0.95; speechSynthesis.speak(u); } catch (e) {}
+}
+
+// ── MAIN LOOP ───────────────────────────────────────────────────────────────────────
+var last = performance.now(), lastHb = 0, lastUi = 0, prev = null;
+function frame(now) {
+  requestAnimationFrame(frame);
+  var realNow = performance.now(); // timed on the real clock: after a long freeze the rAF time can be from before the wake
+  if (realNow - lastTick > 1000) { hostHold = realNow + 700; host.was = false; host.last = null; } // woke from a freeze or a background tab: let the newer state arrive, then adopt it like a new host
+  lastTick = realNow;
+  var dt = Math.max(0, Math.min(0.05, (now - last) / 1000)), t = now / 1000; last = now; // never negative: the first frame can be stamped before `last`
+  if (now - lastHb > 1000) { lastHb = now; net.me.set("hb", Date.now()); fixColor(); }
+  if (isHost()) hostTick(); else host.was = false;
+  var g = game();
+  if (g) {
+    autopilot(g, now);
+    // One-off effects from what changed in state: a new word (bubble + pop), a twist (the fire flares), the reading.
+    if (prev && prev.id === g.id) {
+      if (g.words.length > prev.words.length) { var w = g.words[g.words.length - 1]; bubbles.set(w[1] >= 0 ? w[1] : -1, { w: w[0], at: now }); if (w[1] < 0) flare = 0.6; tone(520 + Math.random() * 200, 0.1, 0.06, "triangle"); }
+      if (g.tw !== prev.tw && g.tw >= 0) { flare = 1.5; flareColor = g.tw === 99 ? "#ff6fae" : ["#b48cff", "#6fd0ff", "#7dff9a"][g.tw % 3]; tone(220, 0.6, 0.08, "sine"); }
+      if (g.phase === "read" && prev.phase !== "read" && me.spoke !== g.id) { me.spoke = g.id; if (me.heard) readAloud(storyText(g)); }
+    }
+    if (g.phase === "tell" && (!prev || prev.id !== g.id || prev.phase !== "tell")) me.vote = null;
+    prev = g;
+  }
+  drawScene(g, t, dt, now);
+  crackle(now);
+  if (g && now - lastUi > 100) { lastUi = now; screen(g); }
+}
+
+(async function start() {
+  net = await connect();
+  net.onState(function (st) { S = st; });
+  net.on("word", function (msg, from) { if (isHost()) applyWord(from, msg); });
+  net.onDisconnect(function () { netDown = true; });
+  net.onReconnect(function () { netDown = false; });
+  if (!net.offline && typeof MP !== "undefined") board = MP.auth({ key: MP_CONNECT.key, apiUrl: MP_CONNECT.apiUrl }).leaderboard(CONFIG.board);
+  var g0 = game(), taken = new Set(Object.entries(S.entities.players || {}).filter(function (e) { return e[0] !== net.sessionId; }).map(function (e) { return e[1].c; }).concat(g0 ? g0.order.map(function (o) { return o[2]; }) : []));
+  myColor = COLORS.find(function (c) { return !taken.has(c); }) || COLORS[Math.floor(Math.random() * COLORS.length)];
+  net.me.set({ n: myName, c: myColor, hb: Date.now() });
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

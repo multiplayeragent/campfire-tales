@@ -1,0 +1,22 @@
+{
+  "name": "Campfire Tales",
+  "genre": "social",
+  "dim": "2D",
+  "mode": "Party",
+  "players": "2–10",
+  "hook": "One story, one word each. The fire adds twists.",
+  "how": "Sit round the fire and build a story together, a word or two each, in turn, before your timer runs out. Now and then the fire throws in a twist. At the end the story is read aloud and everyone votes for the best word.",
+  "controls": "Type a word and press Enter, or tap one of the suggestions; tap a word to vote",
+  "uses": [
+    ["Host-run rounds", "One player's browser keeps the turn order, the twists and the timer, and counts the votes; if it leaves, the next player takes over."],
+    ["Bots", "Bot storytellers fill the circle and add words of their own until friends join."],
+    ["Live sync", "Every word appears round the fire for everyone the moment it's added."],
+    ["Story log", "The fire keeps its last few stories; save any to your device or share it as text."],
+    ["Leaderboard", "The most votes a player's words got in one story."]
+  ],
+  "ideas": [
+    "Make it a spooky ghost-story night with scarier twists",
+    "Let everyone pick the story's opening line by vote",
+    "Draw a picture for each sentence of the story"
+  ]
+}
