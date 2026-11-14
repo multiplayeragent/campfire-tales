@@ -8,7 +8,7 @@
   :root { --ink: #fff4e3; --dim: #c9b9a3; --ember: #ffb347; --flame: #ff7a2f; --panel: #1a1424e6; }
   html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; background: #0b1030; }
   body { font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); user-select: none; -webkit-user-select: none; }
-  canvas { position: fixed; inset: 0; display: block; touch-action: none; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
   [hidden] { display: none !important; }
   button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
   #story { position: fixed; left: 50%; top: max(10px, env(safe-area-inset-top)); transform: translateX(-50%); width: min(720px, calc(100vw - 24px)); box-sizing: border-box; max-height: 38vh; overflow: auto; padding: 12px 16px; border-radius: 18px; background: var(--panel); border: 1px solid #ffb34733; box-shadow: 0 0 40px #ff7a2f22; }
@@ -33,7 +33,7 @@
   #big:empty { display: none; }
   #big b { display: block; font: 900 clamp(26px, 6vw, 44px)/1.1 Georgia, serif; color: var(--ember); }
   #big small { display: block; font-size: 15px; font-weight: 700; color: var(--dim); margin-top: 4px; }
-  #turn { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(10px, env(safe-area-inset-bottom)); width: min(560px, calc(100vw - 24px)); box-sizing: border-box; padding: 10px 12px; border-radius: 18px; background: var(--panel); border: 1px solid #ffffff22; }
+  #turn { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(max(10px, env(safe-area-inset-bottom)) + var(--kb, 0px)); width: min(560px, calc(100vw - 24px)); box-sizing: border-box; padding: 10px 12px; border-radius: 18px; background: var(--panel); border: 1px solid #ffffff22; }
   #turnQ { font-weight: 800; margin-bottom: 6px; text-align: center; }
   #bar { height: 6px; border-radius: 3px; background: #ffffff1a; overflow: hidden; margin-bottom: 8px; } #bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--ember), var(--flame)); transform-origin: left; }
   #mine { display: flex; gap: 8px; } #mine[hidden] { display: none; }
@@ -44,13 +44,14 @@
   #net { position: fixed; left: max(10px, env(safe-area-inset-left)); bottom: max(10px, env(safe-area-inset-bottom)); font-size: 12px; color: var(--dim); pointer-events: none; text-shadow: 0 1px 3px #000; }
   #tools { position: fixed; right: max(10px, env(safe-area-inset-right)); bottom: max(10px, env(safe-area-inset-bottom)); display: flex; gap: 8px; }
   #tools button { width: 48px; height: 48px; border-radius: 50%; border: 1px solid #ffffff33; background: var(--panel); font-size: 20px; }
-  body.turning #tools, body.turning #net { bottom: calc(max(10px, env(safe-area-inset-bottom)) + 185px); }
+  body.turning #tools, body.turning #net { bottom: calc(max(10px, env(safe-area-inset-bottom)) + var(--kb, 0px) + var(--turnH, 175px) + 10px); } /* --turnH: the turn bar's height, measured */
   .sheet { position: fixed; inset: 0; display: grid; place-items: center; background: #000a; padding: 16px; box-sizing: border-box; }
   .card { box-sizing: border-box; width: min(420px, calc(100vw - 32px)); max-height: 84vh; overflow: auto; padding: 16px 18px; border-radius: 18px; background: #1d1626; border: 1px solid #ffb34744; box-shadow: 0 0 60px #ff7a2f33; }
   .card h2 { margin: 0 0 4px; font: 900 24px Georgia, serif; color: var(--ember); text-align: center; }
   .card .sub { margin: 0 0 8px; color: var(--dim); font-size: 14px; text-align: center; }
   .card h3 { margin: 12px 0 4px; font-size: 12px; color: var(--ember); text-transform: uppercase; letter-spacing: .08em; }
   .card ol { margin: 0; padding-left: 24px; font-size: 14px; } .card li span { float: right; font-weight: 800; color: var(--ember); } .card li.me { color: var(--ember); }
+  .card li.note { list-style: none; margin-left: -24px; color: var(--dim); } /* a message, not a ranked row */
   .card p { margin: 8px 0 0; font-size: 13px; opacity: .8; text-align: center; }
   .card .row { display: flex; gap: 8px; margin-top: 10px; } .card .row button { flex: 1; min-height: 44px; border-radius: 12px; border: 1px solid #ffffff33; background: #ffffff12; font-weight: 800; }
   button.big { width: 100%; min-height: 48px; margin-top: 12px; border: 0; border-radius: 12px; background: var(--flame); color: #fff; font-weight: 800; font-size: 17px; }
@@ -75,7 +76,7 @@
   <h2 id="bestT"></h2><div class="sub" id="bestSub"></div>
   <h3>Votes this story</h3><ol id="scores"></ol>
   <div class="row"><button id="saveBtn">💾 Save story</button><button id="shareBtn">📤 Share</button></div>
-  <h3>Most-loved storytellers</h3><ol id="board"><li>Loading…</li></ol>
+  <h3>Most-loved storytellers</h3><ol id="board"><li class="note">Loading…</li></ol>
   <button class="big" id="again">Next story</button><p id="next"></p>
 </div></div>
 <div class="sheet" id="logPanel" hidden><div class="card">
@@ -124,7 +125,8 @@ var CONFIG = {
   turnMs: 15000,        // ms you get to add your word
   botMs: [1400, 3800],  // a bot thinks this long before adding its word
   wordsPer: 4,          // each storyteller adds about this many words...
-  minWords: 18, maxWords: 30, // ...but a story is always this long
+  minWords: 18, maxWords: 30, // ...but a story is always about this long: it ends at the first full stop near the end,
+  overrun: 4,           // or this many words past it at most
   twistEvery: 7,        // a twist every this many words
   readMs: 430,          // ms per word when the story is read aloud
   voteMs: 15000,        // ms to vote for the best word
@@ -170,10 +172,13 @@ var PREPS = ["into", "under", "with", "on", "behind", "across", "over", "through
 function kindOf(text) {
   var t = String(text || "").trim(), lw = t.toLowerCase().split(/\s+/).pop() || "";
   if (!t) return "begin";
-  for (var k of ["open", "start", "np", "vp", "pp", "conj", "adj", "noun", "end"]) if (LEX[k].some(function (x) { return x.toLowerCase() === t.toLowerCase(); })) return k;
+  var same = function (x) { return x.toLowerCase() === t.toLowerCase(); };
+  for (var k of ["open", "start", "np", "vp", "pp", "conj", "det", "adj", "noun", "end"]) if (LEX[k].some(same)) return k;
   if (/[.!?]$/.test(t)) return "end";
+  for (var tw of TWISTS.concat([WRAP])) for (var k2 of ["np", "vp", "end"]) if (tw[k2] && tw[k2].some(same)) return k2; // a twist's own pieces
   if (/,$/.test(t)) return "start";
   if (DETS.indexOf(lw) >= 0) return "det";
+  if (lw === "who") return "who";
   if (PREPS.indexOf(lw) >= 0) return "det"; // "into" wants "the …" next, like a determiner would
   if (LEX.conj.indexOf(lw) >= 0 || lw === "and" || lw === "then") return "conj";
   if (LEX.adj.indexOf(lw) >= 0 || /(y|ful|ous|ish|less)$/.test(lw)) return "adj";
@@ -187,6 +192,7 @@ function suggest(words, twist, rnd, n) {
     var k = kinds[Math.floor(rnd() * kinds.length)], pool = (twist && twist[k] && rnd() < 0.7 ? twist[k] : LEX[k]) || LEX.np;
     var w = pool[Math.floor(rnd() * pool.length)];
     if (k === "end" && /[.!?]$/.test(lastText)) continue;
+    if (w === lastText) continue; // not the same piece twice in a row
     if (out.indexOf(w) < 0) out.push(w);
   }
   return out;
@@ -269,10 +275,11 @@ function newStory(id) {
 var isBot = function (id) { return String(id).indexOf("bot") === 0; };
 /** Add a word for the storyteller at seat `who` (-1 = the fire), then pass the turn and maybe throw in a twist. */
 function addWord(g, w, who) {
+  if (!g.words.length || /[.!?]$/.test(g.words[g.words.length - 1][0])) w = w.charAt(0).toUpperCase() + w.slice(1); // a new sentence starts with a capital
   var G = Object.assign({}, g, { words: g.words.concat([[w, who]]) }), n = G.words.length, t = Date.now();
-  if (n >= G.target) return Object.assign(G, { phase: "read", readAt: t + 1200, endsAt: t + 1200 + n * G.ms + 2500, tn: -1 });
+  if (n >= G.target + CONFIG.overrun || (n >= G.target - 3 && /[.!?]$/.test(w))) return Object.assign(G, { phase: "read", readAt: t + 1200, endsAt: t + 1200 + n * G.ms + 2500, tn: -1 });
   if (n === G.target - 3) G.tw = 99; // the last stretch: wrap it up
-  else if (n % CONFIG.twistEvery === 0) { var r = mulberry32(G.seed + n); G.tw = Math.floor(r() * TWISTS.length); G.twists = G.twists.concat([n]); }
+  else if (n % CONFIG.twistEvery === 0 && G.tw !== 99) { var r = mulberry32(G.seed + n); G.tw = Math.floor(r() * TWISTS.length); G.twists = G.twists.concat([n]); }
   return Object.assign(G, nextTurn(G, (g.tn + 1) % G.order.length), {});
 }
 function nextTurn(G, tn) { var t = Date.now(); return { tn: tn, turnAt: t, endsAt: t + CONFIG.turnMs }; }
@@ -292,7 +299,12 @@ function tally(g) {
   var votes = {};
   var add = function (w) { if (g.words[w] && g.words[w][1] >= 0) votes[w] = (votes[w] || 0) + 1; };
   humans().forEach(function (h) { var v = h === net.sessionId ? me.vote : cached("vote:" + h, (S.entities.players[h] || {}).vote, null); if (v && v.r === g.id) add(v.w); });
-  g.order.forEach(function (o, seat) { if (!isBot(o[0])) return; var pool = g.words.map(function (w, i) { return i; }).filter(function (i) { return g.words[i][1] >= 0 && g.words[i][1] !== seat; }); if (pool.length) add(pool[Math.floor(Math.random() * pool.length)]); });
+  var liked = function (i) { return mulberry32(g.seed + i * 7919)() + (g.words[i][0].indexOf(" ") > 0 ? 0.25 : 0); }; // the bots' shared taste (phrases do a bit better)
+  g.order.forEach(function (o, seat) { // each bot looks at a few words and votes for the one it likes best
+    if (!isBot(o[0])) return; var pool = g.words.map(function (w, i) { return i; }).filter(function (i) { return g.words[i][1] >= 0 && g.words[i][1] !== seat; }), best = -1;
+    for (var k = 0; k < 4 && pool.length; k++) { var c = pool[Math.floor(Math.random() * pool.length)]; if (best < 0 || liked(c) > liked(best)) best = c; }
+    if (best >= 0) add(best);
+  });
   return votes;
 }
 /** The story as plain text: words joined, a full stop at the end. */
@@ -377,7 +389,7 @@ function autopilot(g, now) {
 function $(id) { return document.getElementById(id); }
 function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
 $("send").onclick = function () { sendWord($("say").value); };
-$("say").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); sendWord($("say").value); } });
+$("say").addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); sendWord($("say").value); } });
 $("chips").onclick = function (e) { var b = e.target.closest("button"); if (b) sendWord(b.dataset.w); };
 $("again").onclick = function () { var g = game(); if (g) { me.rdy = g.id; net.me.set("rdy", g.id); pop(); $("next").textContent = "Waiting for the others…"; } };
 $("saveBtn").onclick = function () { var g = game(); if (g) saveTale(g); };
@@ -429,6 +441,7 @@ function screen(g) {
   // The turn bar: your input and chips on your turn, otherwise who is thinking.
   var showTurn = !ATTRACT && (g.phase === "tell" || g.phase === "vote");
   $("turn").hidden = !showTurn; document.body.classList.toggle("turning", showTurn);
+  if (showTurn) document.documentElement.style.setProperty("--turnH", $("turn").offsetHeight + "px");
   if (showTurn) {
     var span = g.phase === "tell" ? CONFIG.turnMs : CONFIG.voteMs;
     $("bar").firstElementChild.style.transform = "scaleX(" + Math.max(0, Math.min(1, (g.endsAt - t) / span)) + ")";
@@ -451,17 +464,17 @@ function drawResults(g, left) {
   var tied = Object.keys(votes).filter(function (i) { return best >= 0 && votes[i] === votes[best]; }).length > 1;
   var bw = g.words[best], by = bw && g.order[bw[1]];
   $("bestT").textContent = bw ? (tied ? "A tie for best word!" : "“" + bw[0] + "”") : "The fire liked every word";
-  $("bestSub").textContent = bw ? (tied ? "Several words got " + votes[best] + " votes" : "Best word, by " + (by[0] === net.sessionId ? "you" : by[1]) + " · " + votes[best] + " vote" + (votes[best] === 1 ? "" : "s")) : "No votes this time.";
+  $("bestSub").textContent = bw ? (tied ? "Several words got " + votes[best] + " vote" + (votes[best] === 1 ? "" : "s") : "Best word, by " + (by[0] === net.sessionId ? "you" : by[1]) + " · " + votes[best] + " vote" + (votes[best] === 1 ? "" : "s")) : "No votes this time.";
   var per = g.order.map(function (o, seat) { var s = 0; Object.keys(votes).forEach(function (i) { if (g.words[i] && g.words[i][1] === seat) s += votes[i]; }); return [o, s]; }).sort(function (a, b) { return b[1] - a[1]; });
   $("scores").innerHTML = per.map(function (x) { return '<li class="' + (x[0][0] === net.sessionId ? "me" : "") + '"><b style="color:' + esc(x[0][2]) + '">●</b> ' + esc(x[0][0] === net.sessionId ? "You" : x[0][1]) + "<span>" + x[1] + " ★</span></li>"; }).join("");
   if (me.rdy !== g.id) $("next").textContent = "Next story in " + left + "s";
   if (boardFor !== g.id) {
     boardFor = g.id;
     var mine = per.find(function (x) { return x[0][0] === net.sessionId; }), list = $("board");
-    if (!board) list.innerHTML = "<li>Leaderboards need a connection.</li>";
+    if (!board) list.innerHTML = "<li class='note'>Leaderboards need a connection.</li>";
     else (mine && mine[1] > 0 ? board.submit(mine[1]).catch(function () { return null; }) : Promise.resolve()).then(function () { return board.top(10); }).then(function (r) {
-      list.innerHTML = r.entries.length ? r.entries.map(function (e) { return "<li>" + esc(e.username || "Player") + "<span>" + e.score + " ★</span></li>"; }).join("") : "<li>No votes yet. Tell a good one.</li>";
-    }).catch(function () { list.innerHTML = "<li>Couldn't load the leaderboard.</li>"; });
+      list.innerHTML = r.entries.length ? r.entries.map(function (e) { return "<li>" + esc(e.username || "Player") + "<span>" + e.score + " ★</span></li>"; }).join("") : "<li class='note'>No votes yet. Tell a good one.</li>";
+    }).catch(function () { list.innerHTML = "<li class='note'>Couldn't load the leaderboard.</li>"; });
   }
 }
 /** Keep a color nobody else has: the later sessionId gives way, and the bots' colors count as taken. */
@@ -473,6 +486,8 @@ function fixColor() {
   net.me.set("c", myColor);
 }
 var touchUI = matchMedia("(pointer: coarse)").matches;
+// Phones: keep the turn bar (and your word box) above the on-screen keyboard.
+if (window.visualViewport) { var keyboardLift = function () { var vv = window.visualViewport; document.documentElement.style.setProperty("--kb", Math.max(0, Math.round(innerHeight - vv.height - vv.offsetTop)) + "px"); }; visualViewport.addEventListener("resize", keyboardLift); visualViewport.addEventListener("scroll", keyboardLift); }
 addEventListener("pointerdown", function () { me.heard = true; unlockAudio(); });
 addEventListener("keydown", function () { me.heard = true; unlockAudio(); });
 
