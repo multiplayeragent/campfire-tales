@@ -131,7 +131,7 @@ var CONFIG = {
   readMs: 430,          // ms per word when the story is read aloud
   voteMs: 15000,        // ms to vote for the best word
   doneMs: 15000,        // ms on the results before the next story
-  maxLen: 24,           // longest word or phrase you can add (characters, up to 3 words)
+  maxLen: 24,           // longest word or phrase you can add (characters, up to 4 words)
   logSize: 4,           // stories the room keeps in its log
   board: "story-votes",
 };
@@ -197,8 +197,8 @@ function suggest(words, twist, rnd, n) {
   }
   return out;
 }
-/** Tidy a word someone typed: trim, at most three words, at most CONFIG.maxLen characters. */
-function clean(w) { return String(w || "").replace(/[<>{}[\]\\]/g, "").replace(/\s+/g, " ").trim().split(" ").slice(0, 3).join(" ").slice(0, CONFIG.maxLen); }
+/** Tidy a word someone typed: trim, at most four words (the longest pieces above), at most CONFIG.maxLen characters. */
+function clean(w) { return String(w || "").replace(/[<>{}[\]\\]/g, "").replace(/\s+/g, " ").trim().split(" ").slice(0, 4).join(" ").slice(0, CONFIG.maxLen); }
 
 // ── CONNECTION ──────────────────────────────────────────────────────────────────────
 // The builder fills these in for this game. Downloaded from GitHub? Put your own pk_ key here.
@@ -285,7 +285,11 @@ function addWord(g, w, who) {
 function nextTurn(G, tn) { var t = Date.now(); return { tn: tn, turnAt: t, endsAt: t + CONFIG.turnMs }; }
 var twistOf = function (g) { return g.tw === 99 ? WRAP : g.tw >= 0 ? TWISTS[g.tw] : null; };
 /** A word from the host for a bot (or from the fire for someone who ran out of time). */
-var botWord = function (g) { return suggest(g.words, twistOf(g), Math.random, 1)[0] || "and then"; };
+var botWord = function (g) {
+  var last = g.words.length ? g.words[g.words.length - 1][0] : "";
+  if (g.tw === 99 && (NEXT[kindOf(last)] || []).indexOf("end") >= 0 && Math.random() < 0.7) return WRAP.end[Math.floor(Math.random() * WRAP.end.length)]; // "Wrap it up!": bots finish the sentence
+  return suggest(g.words, twistOf(g), Math.random, 1)[0] || "and then";
+};
 /** A "word" intent (or the host's own word): only from whoever's turn it is, for this story at this length. */
 function applyWord(from, msg) {
   var g = game();
@@ -297,13 +301,13 @@ function applyWord(from, msg) {
 /** Count the votes: votes per word, and per storyteller. */
 function tally(g) {
   var votes = {};
-  var add = function (w) { if (g.words[w] && g.words[w][1] >= 0) votes[w] = (votes[w] || 0) + 1; };
-  humans().forEach(function (h) { var v = h === net.sessionId ? me.vote : cached("vote:" + h, (S.entities.players[h] || {}).vote, null); if (v && v.r === g.id) add(v.w); });
+  var add = function (w, seat) { if (Number.isInteger(w) && g.words[w] && g.words[w][1] >= 0 && g.words[w][1] !== seat) votes[w] = (votes[w] || 0) + 1; }; // never the fire's words or the voter's own
+  humans().forEach(function (h) { var v = h === net.sessionId ? me.vote : cached("vote:" + h, (S.entities.players[h] || {}).vote, null); if (v && v.r === g.id) add(v.w, g.order.findIndex(function (o) { return o[0] === h; })); });
   var liked = function (i) { return mulberry32(g.seed + i * 7919)() + (g.words[i][0].indexOf(" ") > 0 ? 0.25 : 0); }; // the bots' shared taste (phrases do a bit better)
   g.order.forEach(function (o, seat) { // each bot looks at a few words and votes for the one it likes best
     if (!isBot(o[0])) return; var pool = g.words.map(function (w, i) { return i; }).filter(function (i) { return g.words[i][1] >= 0 && g.words[i][1] !== seat; }), best = -1;
     for (var k = 0; k < 4 && pool.length; k++) { var c = pool[Math.floor(Math.random() * pool.length)]; if (best < 0 || liked(c) > liked(best)) best = c; }
-    if (best >= 0) add(best);
+    if (best >= 0) add(best, seat);
   });
   return votes;
 }
@@ -441,7 +445,6 @@ function screen(g) {
   // The turn bar: your input and chips on your turn, otherwise who is thinking.
   var showTurn = !ATTRACT && (g.phase === "tell" || g.phase === "vote");
   $("turn").hidden = !showTurn; document.body.classList.toggle("turning", showTurn);
-  if (showTurn) document.documentElement.style.setProperty("--turnH", $("turn").offsetHeight + "px");
   if (showTurn) {
     var span = g.phase === "tell" ? CONFIG.turnMs : CONFIG.voteMs;
     $("bar").firstElementChild.style.transform = "scaleX(" + Math.max(0, Math.min(1, (g.endsAt - t) / span)) + ")";
@@ -452,6 +455,7 @@ function screen(g) {
       var ck = g.id + ":" + g.words.length;
       if (me.chipsFor !== ck) { me.chipsFor = ck; $("chips").innerHTML = suggest(g.words, twistOf(g), Math.random, 3).map(function (w) { return '<button data-w="' + esc(w) + '">' + esc(w) + "</button>"; }).join(""); if (!touchUI) $("say").focus(); }
     } else { $("turnQ").textContent = (seat ? seat[1] : "Someone") + " is thinking… " + left + "s"; $("mine").hidden = true; $("chips").innerHTML = ""; me.chipsFor = ""; }
+    document.documentElement.style.setProperty("--turnH", $("turn").offsetHeight + "px"); // measured after filling it, so the buttons never cover your word box
   }
   band.top = $("story").innerHTML ? $("story").getBoundingClientRect().bottom : 0; band.bot = $("turn").hidden ? H : $("turn").getBoundingClientRect().top;
   var over = g.phase === "done" && !ATTRACT;
